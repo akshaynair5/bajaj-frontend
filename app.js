@@ -1,47 +1,82 @@
-const apiUrl = 'https://bajaj-test-6vxx.onrender.com/bfhl'; // Replace with your deployed API URL
+// Function to validate JSON input
+function isValidJson(json) {
+    try {
+        JSON.parse(json);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
 
 // Function to handle the POST request
-function sendPostRequest() {
-    // Get form values
-    const userId = document.getElementById('userId').value;
-    const email = document.getElementById('email').value;
-    const rollNumber = document.getElementById('rollNumber').value;
-    const dataArray = document.getElementById('dataArray').value.split(',').map(item => item.trim());
+async function sendPostRequest() {
+    const jsonInput = document.getElementById('jsonInput').value;
+    const errorMessage = document.getElementById('errorMessage');
+    const dropdownContainer = document.getElementById('dropdownContainer');
+    const responseContainer = document.getElementById('responseContainer');
 
-    // Prepare the POST request payload
-    const data = {
-        user_id: userId,
-        email: email,
-        roll_number: rollNumber,
-        data_array: dataArray
-    };
+    if (!isValidJson(jsonInput)) {
+        errorMessage.textContent = 'Invalid JSON format.';
+        errorMessage.classList.remove('hidden');
+        dropdownContainer.classList.add('hidden');
+        return;
+    }
 
-    fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById('response').textContent = JSON.stringify(data, null, 4);
-    })
-    .catch(error => {
-        console.error('Error in POST request:', error);
-        document.getElementById('response').textContent = 'Error in POST request';
-    });
+    errorMessage.classList.add('hidden');
+
+    try {
+        const response = await fetch('http://localhost:3000/bfhl', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: jsonInput
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok.');
+        }
+
+        const result = await response.json();
+        dropdownContainer.classList.remove('hidden');
+        populateResponse(result);
+    } catch (error) {
+        errorMessage.textContent = 'Error: ' + error.message;
+        errorMessage.classList.remove('hidden');
+    }
 }
 
-// Function to handle the GET request
-function sendGetRequest() {
-    fetch(apiUrl)
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById('response').textContent = JSON.stringify(data, null, 4);
-    })
-    .catch(error => {
-        console.error('Error in GET request:', error);
-        document.getElementById('response').textContent = 'Error in GET request';
-    });
+// Function to display the response based on selected options
+function populateResponse(responseData) {
+    const multiSelect = document.getElementById('multiSelect');
+    const responseContainer = document.getElementById('responseContainer');
+    const selectedOptions = Array.from(multiSelect.selectedOptions).map(option => option.value);
+
+    responseContainer.innerHTML = ''; // Clear previous response
+
+    const filteredResponse = {};
+
+    if (selectedOptions.includes('alphabets')) {
+        filteredResponse.alphabets = responseData.alphabets;
+    }
+
+    if (selectedOptions.includes('numbers')) {
+        filteredResponse.numbers = responseData.numbers;
+    }
+
+    if (selectedOptions.includes('highest_lowercase')) {
+        filteredResponse.highestLowercase = responseData.highest_lowercase_alphabet;
+    }
+
+    responseContainer.innerHTML = `<pre>${JSON.stringify(filteredResponse, null, 2)}</pre>`;
 }
+
+// Event listener to update response when dropdown changes
+document.getElementById('multiSelect').addEventListener('change', () => {
+    const responseData = {
+        alphabets: ["A", "B", "C"],
+        numbers: [1, 2, 3],
+        highest_lowercase: ["z"]
+    };  // Example response data to simulate dynamic update
+    populateResponse(responseData);
+});
